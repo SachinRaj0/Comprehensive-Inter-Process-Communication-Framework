@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPC Framework Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00d9ff;
+            --secondary: #ff006e;
+            --accent: #ffbe0b;
+            --success: #06ffa5;
+            --warning: #ff9500;
+            --danger: #ff3366;
+            --bg-light: #0a0e27;
+            --bg-dark: #050816;
+            --card-bg: rgba(15, 23, 42, 0.8);
+            --text-primary: #e0e7ff;
+            --text-secondary: #94a3b8;
+            --border-glow: rgba(0, 217, 255, 0.3);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px var(--primary), 0 0 40px var(--primary); }
+            50% { box-shadow: 0 0 30px var(--primary), 0 0 60px var(--primary); }
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 110, 0.1) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(255, 0, 110, 0.15));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 217, 255, 0.05), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 8px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-btn {
+            padding: 14px 28px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            font-size: 15px;
+        }
+
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            padding: 2px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 8px 24px rgba(0, 217, 255, 0.4);
+        }
+
+        .utility-btns {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, var(--warning), var(--danger));
+            color: white;
+            border: 1px solid rgba(255, 149, 0, 0.5);
+        }
+
+        .btn-theme {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .simulation-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .process-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 28px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .process-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 20px 20px 0 0;
+        }
+
+        .process-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 48px rgba(0, 217, 255, 0.2);
+        }
+
+        .process-card h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.7em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: linear-gradient(135deg, var(--success), #00b377);
+            color: white;
+            box-shadow: 0 4px 12px rgba(6, 255, 165, 0.3);
+        }
+
+        .status-locked {
+            background: linear-gradient(135deg, var(--danger), #cc0044);
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 51, 102, 0.3);
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .input-group input::placeholder, .input-group textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #0088cc);
+            color: white;
+            width: 100%;
+            box-shadow: 0 4px 16px rgba(0, 217, 255, 0.3);
+            border: 1px solid rgba(0, 217, 255, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #00cc88);
+            color: white;
+            width: 100%;
+            box-shadow: 0 4px 16px rgba(6, 255, 165, 0.3);
+            border: 1px solid rgba(6, 255, 165, 0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #cc0044);
+            color: white;
+            width: 100%;
+            box-shadow: 0 4px 16px rgba(255, 51, 102, 0.3);
+            border: 1px solid rgba(255, 51, 102, 0.5);
+        }
+
+        .ipc-channel {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.05), rgba(255, 0, 110, 0.05));
+            padding: 28px;
+            border-radius: 20px;
+            border: 2px dashed var(--primary);
+            box-shadow: inset 0 0 40px rgba(0, 217, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ipc-channel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 217, 255, 0.03), transparent);
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .channel-content {
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+            z-index: 1;
+        }
+
+        .data-packet {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(255, 0, 110, 0.2));
+            backdrop-filter: blur(10px);
+            padding: 18px;
+            border-radius: 12px;
+            margin: 8px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 4px 16px rgba(0, 217, 255, 0.3);
+            animation: packetEnter 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+
+        @keyframes packetEnter {
+            from { transform: scale(0.8) translateX(-30px); opacity: 0; }
+            to { transform: scale(1) translateX(0); opacity: 1; }
+        }
+
+        .queue-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 320px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .queue-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .queue-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .queue-container::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        .message-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 18px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            animation: messageSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes messageSlide {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .message-priority {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 700;
+            margin-left: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .priority-high {
+            background: linear-gradient(135deg, var(--danger), #cc0044);
+            color: white;
+            box-shadow: 0 2px 8px rgba(255, 51, 102, 0.4);
+        }
+
+        .priority-normal {
+            background: linear-gradient(135deg, var(--warning), #cc7700);
+            color: white;
+            box-shadow: 0 2px 8px rgba(255, 149, 0, 0.4);
+        }
+
+        .priority-low {
+            background: linear-gradient(135deg, var(--success), #00cc88);
+            color: white;
+            box-shadow: 0 2px 8px rgba(6, 255, 165, 0.4);
+        }
+
+        .shared-memory-block {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 12px;
+            min-height: 160px;
+            font-family: 'Courier New', monospace;
+            border: 2px solid var(--primary);
+            box-shadow: inset 0 0 30px rgba(0, 217, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .log-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-top: 24px;
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+        }
+
+        .log-entry {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            animation: logFade 0.4s;
+            border-left: 3px solid;
+        }
+
+        @keyframes logFade {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-info {
+            background: rgba(0, 217, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .log-success {
+            background: rgba(6, 255, 165, 0.1);
+            border-color: var(--success);
+        }
+
+        .log-warning {
+            background: rgba(255, 149, 0, 0.1);
+            border-color: var(--warning);
+        }
+
+        .log-error {
+            background: rgba(255, 51, 102, 0.1);
+            border-color: var(--danger);
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 320px;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.95), rgba(255, 0, 110, 0.95));
+            backdrop-filter: blur(10px);
+            color: white;
+            text-align: center;
+            border-radius: 12px;
+            padding: 14px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -160px;
+            opacity: 0;
+            transition: all 0.3s;
+            font-size: 0.85em;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .comparison-table {
+            width: 100%;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 18px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 217, 255, 0.1);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .security-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 0, 110, 0.3);
+        }
+
+        .security-panel h3 {
+            color: var(--secondary);
+            margin-bottom: 18px;
+            font-size: 1.2em;
+        }
+
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .auth-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .auth-success {
+            background: var(--success);
+            box-shadow: 0 0 16px var(--success);
+        }
+
+        .auth-fail {
+            background: var(--danger);
+            box-shadow: 0 0 16px var(--danger);
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .utility-btns {
+                width: 100%;
+            }
+
+            .utility-btns .btn {
+                flex: 1;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ IPC Framework Simulator</h1>
+            <p>Advanced Inter-Process Communication Mechanisms Visualization</p>
+        </header>
+
+        <div class="controls">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="pipes">🔀 Pipes</button>
+                <button class="tab-btn" data-tab="queue">📬 Message Queue</button>
+                <button class="tab-btn" data-tab="memory">💾 Shared Memory</button>
+                <button class="tab-btn" data-tab="comparison">📊 Comparison</button>
+            </div>
+            <div class="utility-btns">
+                <button class="btn btn-reset" onclick="resetSimulation()">🔄 Reset</button>
+                <button class="btn btn-theme" onclick="toggleTheme()">🌙 Dark</button>
+            </div>
+        </div>
+
+        <!-- Pipes Tab -->
+        <div id="pipes" class="tab-content active">
+            <div class="security-panel">
+                <h3>🔐 Process Authentication</h3>
+                <div class="input-group">
+                    <label>Process A Security Token:</label>
+                    <input type="password" id="pipeTokenA" placeholder="Enter token (default: processA123)">
+                    <div class="auth-status" id="pipeAuthA"></div>
+                </div>
+            </div>
+
+            <div class="simulation-container">
+                <div class="process-card">
+                    <h3>
+                        Process A (Writer)
+                        <span class="tooltip">💡
+                            <span class="tooltiptext">Process A writes data to the pipe. Communication is unidirectional (one-way only).</span>
+                        </span>
+                    </h3>
+                    <div class="input-group">
+                        <label>Data to Write:</label>
+                        <textarea id="pipeInput" rows="3" placeholder="Enter data to send through pipe..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="pipeWrite()">write() - Send Data</button>
+                </div>
+
+                <div class="process-card">
+                    <h3>
+                        Process B (Reader)
+                        <span class="tooltip">💡
+                            <span class="tooltiptext">Process B reads data from the pipe sequentially using FIFO (First In First Out).</span>
+                        </span>
+                    </h3>
+                    <div class="input-group">
+                        <label>Received Data:</label>
+                        <textarea id="pipeOutput" rows="3" readonly placeholder="Data will appear here..."></textarea>
+                    </div>
+                    <button class="btn btn-success" onclick="pipeRead()">read() - Read Data</button>
+                </div>
+
+                <div class="ipc-channel">
+                    <h3>📡 Pipe Channel (Kernel Space)</h3>
+                    <div class="channel-content" id="pipeChannel">
+                        <p style="opacity: 0.6;">Pipe buffer is empty</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-container">
+                <h3>📋 System Call Log</h3>
+                <div id="pipeLog"></div>
+            </div>
+        </div>
+
+        <!-- Message Queue Tab -->
+        <div id="queue" class="tab-content">
+            <div class="security-panel">
+                <h3>🔐 Queue Access Control</h3>
+                <div class="input-group">
+                    <label>Access Token:</label>
+                    <input type="password" id="queueToken" placeholder="Enter token (default: queue456)">
+                    <div class="auth-status" id="queueAuth"></div>
+                </div>
+            </div>
+
+            <div class="simulation-container">
+                <div class="process-card">
+                    <h3>
+                        Process A (Sender)
+                        <span class="tooltip">💡
+                            <span class="tooltiptext">Messages are queued with priorities. High priority messages can be dequeued first.</span>
+                        </span>
+                    </h3>
+                    <div class="input-group">
+                        <label>Message Content:</label>
+                        <input type="text" id="queueMessage" placeholder="Enter message...">
+                    </div>
+                    <div class="input-group">
+                        <label>Priority Level:</label>
+                        <select id="queuePriority">
+                            <option value="low">Low Priority</option>
+                            <option value="normal" selected>Normal Priority</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="enqueuMessage()">msgsnd() - Send Message</button>
+                </div>
+
+                <div class="process-card">
+                    <h3>
+                        Process B (Receiver)
+                        <span class="tooltip">💡
+                            <span class="tooltiptext">Messages received in FIFO order unless priority sorting is enabled.</span>
+                        </span>
+                    </h3>
+                    <div class="input-group">
+                        <label>
+                            <input type="checkbox" id="prioritySort"> Enable Priority Sorting
+                        </label>
+                    </div>
+                    <button class="btn btn-success" onclick="dequeueMessage()">msgrcv() - Receive Message</button>
+                    <div id="queueReceived" style="margin-top: 15px; padding: 14px; background: rgba(6, 255, 165, 0.1); border-radius: 12px; min-height: 60px; border: 1px solid var(--success);">
+                        <strong style="color: var(--success);">Last Received:</strong>
+                        <p id="queueReceivedText" style="margin-top: 8px; color: var(--text-secondary);">No message received yet</p>
+                    </div>
+                </div>
+
+                <div class="ipc-channel">
+                    <h3>📬 Message Queue (Kernel Space)</h3>
+                    <div class="queue-container" id="messageQueue">
+                        <p style="opacity: 0.6; text-align: center;">Queue is empty</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-container">
+                <h3>📋 System Call Log</h3>
+                <div id="queueLog"></div>
+            </div>
+        </div>
+
+        <!-- Shared Memory Tab -->
+        <div id="memory" class="tab-content">
+            <div class="security-panel">
+                <h3>🔐 Memory Access Control</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="input-group">
+                        <label>Process A Token:</label>
+                        <input type="password" id="memTokenA" placeholder="Enter token (default: memA789)">
+                        <div class="auth-status" id="memAuthA"></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Process B Token:</label>
+                        <input type="password" id="memTokenB" placeholder="Enter token (default: memB789)">
+                        <div class="auth-status" id="memAuthB"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="simulation-container">
+                <div class="process-card">
+                    <h3>
+                        Process A
+                        <span class="status-badge" id="memStatusA">Ready</span>
+                        <span class="tooltip">💡
+                            <span class="tooltiptext">Shared memory allows both processes to access the same memory region. Use mutex locks to prevent race conditions.</span>
+                        </span>
+                    </h3>
+                    <div class="input-group">
+                        <label>Data to Write:</label>
+                        <textarea id="memInputA" rows="2" placeholder="Enter data..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="acquireLock('A')" id="lockBtnA">🔓 Acquire Lock</button>
+                    <button class="btn btn-success" onclick="writeSharedMemory('A')" disabled id="writeBtnA">shmwrite() - Write</button>
+                    <button class="btn btn-danger" onclick="releaseLock('A')" disabled id="unlockBtnA">🔒 Release Lock</button>
+                </div>
+
+                <div class="process-card">
+                    <h3>
+                        Process B
+                        <span class="status-badge" id="memStatusB">Ready</span>
+                    </h3>
+                    <div class="input-group">
+                        <label>Data to Write:</label>
+                        <textarea id="memInputB" rows="2" placeholder="Enter data..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="acquireLock('B')" id="lockBtnB">🔓 Acquire Lock</button>
+                    <button class="btn btn-success" onclick="writeSharedMemory('B')" disabled id="writeBtnB">shmwrite() - Write</button>
+                    <button class="btn btn-danger" onclick="releaseLock('B')" disabled id="unlockBtnB">🔒 Release Lock</button>
+                </div>
+
+                <div class="ipc-channel">
+                    <h3>💾 Shared Memory Segment (Kernel Space)</h3>
+                    <div class="shared-memory-block" id="sharedMemory">
+                        [Empty Memory Block]
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 15px; align-items: center;">
+                        <strong>Mutex Status:</strong>
+                        <span id="mutexStatus" class="status-badge">🔓 Unlocked</span>
+                        <span id="mutexOwner" style="opacity: 0.7;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-container">
+                <h3>📋 System Call Log</h3>
+                <div id="memoryLog"></div>
+            </div>
+        </div>
+
+        <!-- Comparison Tab -->
+        <div id="comparison" class="tab-content">
+            <h2 style="margin-bottom: 24px; color: var(--primary);">IPC Mechanisms Comparison</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Pipes</th>
+                        <th>Message Queue</th>
+                        <th>Shared Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Communication Type</strong></td>
+                        <td>Unidirectional (one-way)</td>
+                        <td>Bidirectional</td>
+                        <td>Bidirectional</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Structure</strong></td>
+                        <td>Stream of bytes</td>
+                        <td>Structured messages</td>
+                        <td>Raw memory block</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Synchronization</strong></td>
+                        <td>Automatic (blocking)</td>
+                        <td>Automatic (blocking)</td>
+                        <td>Manual (requires mutex)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performance</strong></td>
+                        <td>Moderate</td>
+                        <td>Moderate</td>
+                        <td>High (fastest)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Complexity</strong></td>
+                        <td>Simple</td>
+                        <td>Moderate</td>
+                        <td>Complex</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use Case</strong></td>
+                        <td>Simple parent-child communication</td>
+                        <td>Multiple producers/consumers</td>
+                        <td>Large data sharing, high-speed transfer</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Kernel Overhead</strong></td>
+                        <td>Medium</td>
+                        <td>Medium</td>
+                        <td>Low (after setup)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Security</strong></td>
+                        <td>Process-specific</td>
+                        <td>Permissions-based</td>
+                        <td>Permissions + manual locking</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let state = {
+            pipe: {
+                buffer: [],
+                authenticated: false
+            },
+            queue: {
+                messages: [],
+                msgId: 1,
+                authenticated: false
+            },
+            memory: {
+                content: '[Empty Memory Block]',
+                locked: false,
+                lockedBy: null,
+                authA: false,
+                authB: false
+            }
+        };
+
+        // Authentication tokens
+        const AUTH_TOKENS = {
+            pipeA: 'processA123',
+            queue: 'queue456',
+            memA: 'memA789',
+            memB: 'memB789'
+        };
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Theme toggle
+        function toggleTheme() {
+            const btn = document.querySelector('.btn-theme');
+            btn.textContent = btn.textContent.includes('Dark') ? '☀️ Light' : '🌙 Dark';
+        }
+
+        // Logging functions
+        function log(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            container.insertBefore(entry, container.firstChild);
+            
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        // Authentication functions
+        function authenticate(tokenId, processType) {
+            const token = document.getElementById(tokenId).value;
+            const authStatus = document.getElementById(tokenId.replace('Token', 'Auth'));
+            
+            let isValid = false;
+            let stateKey = '';
+
+            if (tokenId.includes('pipe')) {
+                isValid = !token || token === AUTH_TOKENS.pipeA;
+                stateKey = 'pipe';
+            } else if (tokenId.includes('queue')) {
+                isValid = !token || token === AUTH_TOKENS.queue;
+                stateKey = 'queue';
+            } else if (tokenId.includes('memTokenA')) {
+                isValid = !token || token === AUTH_TOKENS.memA;
+                state.memory.authA = isValid;
+            } else if (tokenId.includes('memTokenB')) {
+                isValid = !token || token === AUTH_TOKENS.memB;
+                state.memory.authB = isValid;
+            }
+
+            if (stateKey) {
+                state[stateKey].authenticated = isValid;
+            }
+
+            authStatus.innerHTML = isValid 
+                ? '<div class="auth-icon auth-success"></div><span>✓ Authenticated</span>'
+                : '<div class="auth-icon auth-fail"></div><span>✗ Authentication Failed</span>';
+
+            return isValid;
+        }
+
+        // PIPES IPC
+        function pipeWrite() {
+            if (!authenticate('pipeTokenA', 'A')) {
+                log('pipeLog', 'ERROR: Authentication failed for Process A', 'error');
+                return;
+            }
+
+            const input = document.getElementById('pipeInput').value;
+            if (!input.trim()) {
+                log('pipeLog', 'ERROR: Cannot write empty data', 'error');
+                return;
+            }
+
+            state.pipe.buffer.push(input);
+            updatePipeChannel();
+            log('pipeLog', `write(): Process A wrote ${input.length} bytes to pipe`, 'success');
+            document.getElementById('pipeInput').value = '';
+        }
+
+        function pipeRead() {
+            if (state.pipe.buffer.length === 0) {
+                log('pipeLog', 'WARNING: Pipe is empty - read() blocked', 'warning');
+                return;
+            }
+
+            const data = state.pipe.buffer.shift();
+            document.getElementById('pipeOutput').value = data;
+            updatePipeChannel();
+            log('pipeLog', `read(): Process B read ${data.length} bytes from pipe`, 'success');
+        }
+
+        function updatePipeChannel() {
+            const channel = document.getElementById('pipeChannel');
+            if (state.pipe.buffer.length === 0) {
+                channel.innerHTML = '<p style="opacity: 0.6;">Pipe buffer is empty</p>';
+            } else {
+                channel.innerHTML = state.pipe.buffer.map((data, i) => 
+                    `<div class="data-packet"><strong>Packet ${i + 1}:</strong> ${data}</div>`
+                ).join('');
+            }
+        }
+
+        // MESSAGE QUEUE IPC
+        function enqueuMessage() {
+            if (!authenticate('queueToken', 'queue')) {
+                log('queueLog', 'ERROR: Authentication failed', 'error');
+                return;
+            }
+
+            const message = document.getElementById('queueMessage').value;
+            const priority = document.getElementById('queuePriority').value;
+
+            if (!message.trim()) {
+                log('queueLog', 'ERROR: Cannot send empty message', 'error');
+                return;
+            }
+
+            const msg = {
+                id: state.queue.msgId++,
+                content: message,
+                priority: priority,
+                timestamp: new Date().toLocaleTimeString()
+            };
+
+            state.queue.messages.push(msg);
+            updateMessageQueue();
+            log('queueLog', `msgsnd(): Message ID ${msg.id} enqueued with ${priority} priority`, 'success');
+            document.getElementById('queueMessage').value = '';
+        }
+
+        function dequeueMessage() {
+            if (state.queue.messages.length === 0) {
+                log('queueLog', 'WARNING: Queue is empty - msgrcv() blocked', 'warning');
+                return;
+            }
+
+            const prioritySort = document.getElementById('prioritySort').checked;
+            let msg;
+
+            if (prioritySort) {
+                const priorityOrder = { high: 0, normal: 1, low: 2 };
+                state.queue.messages.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+            }
+
+            msg = state.queue.messages.shift();
+            document.getElementById('queueReceivedText').textContent = 
+                `ID: ${msg.id} | Priority: ${msg.priority} | Content: ${msg.content}`;
+            updateMessageQueue();
+            log('queueLog', `msgrcv(): Message ID ${msg.id} dequeued`, 'success');
+        }
+
+        function updateMessageQueue() {
+            const queue = document.getElementById('messageQueue');
+            if (state.queue.messages.length === 0) {
+                queue.innerHTML = '<p style="opacity: 0.6; text-align: center;">Queue is empty</p>';
+            } else {
+                queue.innerHTML = state.queue.messages.map(msg => 
+                    `<div class="message-item">
+                        <strong>ID: ${msg.id}</strong>
+                        <span class="message-priority priority-${msg.priority}">${msg.priority}</span>
+                        <p style="margin-top: 8px;">${msg.content}</p>
+                        <small style="opacity: 0.7;">${msg.timestamp}</small>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        // SHARED MEMORY IPC
+        function acquireLock(process) {
+            const tokenId = process === 'A' ? 'memTokenA' : 'memTokenB';
+            if (!authenticate(tokenId, process)) {
+                log('memoryLog', `ERROR: Authentication failed for Process ${process}`, 'error');
+                return;
+            }
+
+            if (state.memory.locked) {
+                log('memoryLog', `WARNING: Mutex already locked by Process ${state.memory.lockedBy}`, 'warning');
+                return;
+            }
+
+            state.memory.locked = true;
+            state.memory.lockedBy = process;
+            
+            document.getElementById(`lockBtn${process}`).disabled = true;
+            document.getElementById(`writeBtn${process}`).disabled = false;
+            document.getElementById(`unlockBtn${process}`).disabled = false;
+            
+            const otherProcess = process === 'A' ? 'B' : 'A';
+            document.getElementById(`lockBtn${otherProcess}`).disabled = true;
+            
+            document.getElementById(`memStatus${process}`).textContent = 'Locked';
+            document.getElementById(`memStatus${process}`).className = 'status-badge status-locked';
+            document.getElementById('mutexStatus').textContent = '🔒 Locked';
+            document.getElementById('mutexStatus').className = 'status-badge status-locked';
+            document.getElementById('mutexOwner').textContent = `Owned by Process ${process}`;
+            
+            log('memoryLog', `mutex_lock(): Process ${process} acquired mutex`, 'info');
+        }
+
+        function writeSharedMemory(process) {
+            const input = document.getElementById(`memInput${process}`).value;
+            if (!input.trim()) {
+                log('memoryLog', 'ERROR: Cannot write empty data', 'error');
+                return;
+            }
+
+            state.memory.content = input;
+            document.getElementById('sharedMemory').textContent = input;
+            log('memoryLog', `shmwrite(): Process ${process} wrote to shared memory`, 'success');
+            document.getElementById(`memInput${process}`).value = '';
+        }
+
+        function releaseLock(process) {
+            state.memory.locked = false;
+            state.memory.lockedBy = null;
+            
+            document.getElementById(`lockBtn${process}`).disabled = false;
+            document.getElementById(`writeBtn${process}`).disabled = true;
+            document.getElementById(`unlockBtn${process}`).disabled = true;
+            
+            const otherProcess = process === 'A' ? 'B' : 'A';
+            document.getElementById(`lockBtn${otherProcess}`).disabled = false;
+            
+            document.getElementById(`memStatus${process}`).textContent = 'Ready';
+            document.getElementById(`memStatus${process}`).className = 'status-badge status-active';
+            document.getElementById('mutexStatus').textContent = '🔓 Unlocked';
+            document.getElementById('mutexStatus').className = 'status-badge status-active';
+            document.getElementById('mutexOwner').textContent = '';
+            
+            log('memoryLog', `mutex_unlock(): Process ${process} released mutex`, 'info');
+        }
+
+        // Reset simulation
+        function resetSimulation() {
+            state = {
+                pipe: { buffer: [], authenticated: false },
+                queue: { messages: [], msgId: 1, authenticated: false },
+                memory: { content: '[Empty Memory Block]', locked: false, lockedBy: null, authA: false, authB: false }
+            };
+
+            document.getElementById('pipeInput').value = '';
+            document.getElementById('pipeOutput').value = '';
+            document.getElementById('queueMessage').value = '';
+            document.getElementById('memInputA').value = '';
+            document.getElementById('memInputB').value = '';
+            document.getElementById('sharedMemory').textContent = '[Empty Memory Block]';
+            
+            updatePipeChannel();
+            updateMessageQueue();
+            
+            document.getElementById('pipeLog').innerHTML = '';
+            document.getElementById('queueLog').innerHTML = '';
+            document.getElementById('memoryLog').innerHTML = '';
+            
+            document.querySelectorAll('.auth-status').forEach(el => el.innerHTML = '');
+            
+            log('pipeLog', 'System reset - All IPC mechanisms cleared', 'info');
+            log('queueLog', 'System reset - All IPC mechanisms cleared', 'info');
+            log('memoryLog', 'System reset - All IPC mechanisms cleared', 'info');
+        }
+    </script>
+</body>
+</html>
